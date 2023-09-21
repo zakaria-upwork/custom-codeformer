@@ -38,6 +38,8 @@ class Predictor(BasePredictor):
             n_layers=9,
             connect_list=["32", "64", "128", "256"],
         ).to(self.device)
+        #wget https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth
+        # and move it to weights/CodeFormer/
         ckpt_path = "weights/CodeFormer/codeformer.pth"
         checkpoint = torch.load(ckpt_path)[
             "params_ema"
