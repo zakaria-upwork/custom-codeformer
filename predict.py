@@ -5,9 +5,10 @@ running: cog predict -i image=@inputs/whole_imgs/04.jpg -i codeformer_fidelity=0
 push: cog push r8.im/sczhou/codeformer
 """
 import subprocess
+from typing import List
 
 # Define the path to the setup.py script
-
+from utils import generate_eyes_only
 import tempfile
 import cv2
 import torch
@@ -37,7 +38,7 @@ class Predictor(BasePredictor):
             n_layers=9,
             connect_list=["32", "64", "128", "256"],
         ).to(self.device)
-        ckpt_path = "weights/CodeFormer/codeformer-v0.1.0.pth"
+        ckpt_path = "weights/CodeFormer/codeformer.pth"
         checkpoint = torch.load(ckpt_path)[
             "params_ema"
         ]  # update file permission if cannot load
@@ -60,11 +61,11 @@ class Predictor(BasePredictor):
             description="Upsample restored faces for high-resolution AI-created images",
             default=True,
         ),
-        upscale: int = Input(
-            description="The final upsampling scale of the image",
-            default=2,
-        ),
-    ) -> Path:
+        eyes_only: bool = Input(
+            description="Generate only eyes, set False to generate full face",
+            default=True,
+        )
+    ) -> List[Path]:
         """Run a single prediction on the model"""
 
         # take the default setting for the demo
@@ -72,7 +73,7 @@ class Predictor(BasePredictor):
         only_center_face = False
         draw_box = False
         detection_model = "retinaface_resnet50"
-
+        upscale = 1
         self.face_helper = FaceRestoreHelper(
             upscale,
             face_size=512,
@@ -149,11 +150,16 @@ class Predictor(BasePredictor):
                     upsample_img=bg_img, draw_box=draw_box
                 )
 
-        # save restored img
+        # save restored imgs
         out_path = Path(tempfile.mkdtemp()) / 'output.png'
         imwrite(restored_img, str(out_path))
-
-        return out_path
+        outputs = []
+        outputs.append(Path(out_path))
+        if eyes_only:
+            img = cv2.imread(str(image), cv2.IMREAD_COLOR)
+            generate_eyes_only(img,restored_img)
+            outputs.append(Path('output_eyes_only.png'))
+        return outputs
 
 
 def imread(img_path):
