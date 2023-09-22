@@ -1,4 +1,34 @@
 import cv2
+import subprocess
+import shutil
+
+def download_weights():
+    # URL of the file you want to download
+    url = "https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth"
+
+    # Directory where you want to save the downloaded file
+    download_directory = "/path/to/download/directory"
+
+    # Directory where you want to move the downloaded file
+    destination_directory = "weights/CodeFormer"
+
+    # Use wget to download the file
+    try:
+        subprocess.run(["wget", url, "-P", download_directory], check=True)
+        print("File downloaded successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error downloading the file: {e}")
+
+    # Now, move the downloaded file to the destination directory
+    try:
+        file_name = url.split("/")[-1]  # Extract the file name from the URL
+        source_path = f"{download_directory}/{file_name}"
+        destination_path = f"{destination_directory}/{file_name}"
+        shutil.move(source_path, destination_path)
+        print(f"File moved to {destination_path}")
+    except Exception as e:
+        print(f"Error moving the file: {e}")
+
 
 def generate_eye(overlay_image,x,y):
     base_image = cv2.imread('output_eyes_only.png',cv2.IMREAD_UNCHANGED)
