@@ -154,14 +154,11 @@ class Predictor(BasePredictor):
         out_path = Path(tempfile.mkdtemp()) / 'output.png'
         imwrite(restored_img, str(out_path))
         outputs = []
-        old_image = cv2.imread(str(image),cv2.IMREAD_UNCHANGED)
-        generate_eyes_only(old_image,restored_img)
-        img = cv2.imread('output_eyes_only.png')
-        img,_ = upscal(img)
-        cv2.imwrite('output_eyes_only.png', img)
-        outputs.append(Path('output_eyes_only.png'))
-        if full_face :
-            outputs.append(Path(out_path))
+        outputs.append(Path(out_path))
+        if eyes_only:
+            img = cv2.imread(str(image), cv2.IMREAD_COLOR)
+            generate_eyes_only(img,restored_img)
+            outputs.append(Path('output_eyes_only.png'))
         return outputs
 
 
