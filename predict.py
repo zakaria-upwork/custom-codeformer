@@ -6,9 +6,8 @@ push: cog push r8.im/sczhou/codeformer
 """
 import subprocess
 from typing import List
-
 # Define the path to the setup.py script
-from utils import generate_eyes_only
+from utils import generate_eyes_only, download_weights
 import tempfile
 import cv2
 import torch
@@ -28,6 +27,7 @@ from facelib.utils.face_restoration_helper import FaceRestoreHelper
 
 class Predictor(BasePredictor):
     def setup(self):
+        download_weights()
         """Load the model into memory to make running multiple predictions efficient"""
         self.device = "cuda:0"
         self.upsampler = set_realesrgan()
@@ -61,9 +61,9 @@ class Predictor(BasePredictor):
             description="Upsample restored faces for high-resolution AI-created images",
             default=True,
         ),
-        eyes_only: bool = Input(
-            description="Generate only eyes, set False to generate full face",
-            default=True,
+        full_face: bool = Input(
+            description="Only  the eyes will be generated, if you want the full face to be generated, please check the box.",
+            default=False,
         )
     ) -> List[Path]:
         """Run a single prediction on the model"""
@@ -154,11 +154,14 @@ class Predictor(BasePredictor):
         out_path = Path(tempfile.mkdtemp()) / 'output.png'
         imwrite(restored_img, str(out_path))
         outputs = []
-        outputs.append(Path(out_path))
-        if eyes_only:
-            img = cv2.imread(str(image), cv2.IMREAD_COLOR)
-            generate_eyes_only(img,restored_img)
-            outputs.append(Path('output_eyes_only.png'))
+        old_image = cv2.imread(str(image),cv2.IMREAD_UNCHANGED)
+        generate_eyes_only(old_image,restored_img)
+        img = cv2.imread('output_eyes_only.png')
+        img,_ = upscal(img)
+        cv2.imwrite('output_eyes_only.png', img)
+        outputs.append(Path('output_eyes_only.png'))
+        if full_face :
+            outputs.append(Path(out_path))
         return outputs
 
 
@@ -198,3 +201,27 @@ def set_realesrgan():
             half=True,
         )
     return upsampler
+
+def upscal(img):
+    ESRGAN_PATH = "weights/realesrgan/RealESRGAN_x2plus.pth"
+
+    model = RRDBNet(
+            num_in_ch=3,
+            num_out_ch=3,
+            num_feat=64,
+            num_block=23,
+            num_grow_ch=32,
+            scale=2,
+        )
+    netscale = 4
+    upsampler = RealESRGANer(
+            scale=netscale,
+            model_path=ESRGAN_PATH,
+            model=model,
+            tile=0,
+            tile_pad=10,
+            pre_pad=0,
+            half=True,
+        )
+
+    return  upsampler.enhance(img, outscale=2)
